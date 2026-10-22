@@ -64,6 +64,11 @@ public class SecurityConfig {
     HttpMethod.GET, "/api/chargers"
 ).permitAll()
 
+// Allow anyone to read charger reviews.
+.requestMatchers(
+    HttpMethod.GET, "/api/reviews/charger/**"
+).permitAll()
+
                 // Allow customers to load uploaded payment QR images.
                 .requestMatchers(
                     HttpMethod.GET, "/payment-qr/**"
