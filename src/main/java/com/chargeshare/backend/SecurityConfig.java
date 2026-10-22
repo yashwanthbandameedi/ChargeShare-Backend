@@ -54,10 +54,15 @@ public class SecurityConfig {
                     HttpMethod.OPTIONS, "/**"
                 ).permitAll()
 
-                // Public charger search.
-                .requestMatchers(
-                    HttpMethod.GET, "/api/chargers"
-                ).permitAll()
+                // Allow the backend root URL for health checking.
+.requestMatchers(
+    HttpMethod.GET, "/"
+).permitAll()
+
+// Public charger search.
+.requestMatchers(
+    HttpMethod.GET, "/api/chargers"
+).permitAll()
 
                 // Allow customers to load uploaded payment QR images.
                 .requestMatchers(
@@ -86,44 +91,45 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration =
-            new CorsConfiguration();
+    CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of(
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://localhost:5175",
-            "http://localhost:5176"
-        ));
+    // Local development URLs
+    configuration.setAllowedOrigins(List.of(
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176"
 
-        configuration.setAllowedMethods(List.of(
-            "GET",
-            "POST",
-            "PUT",
-            "PATCH",
-            "DELETE",
-            "OPTIONS"
-        ));
+        // Add your deployed frontend URL here after hosting it.
+    ));
 
-        configuration.setAllowedHeaders(List.of(
-            "Authorization",
-            "Content-Type"
-        ));
+    configuration.setAllowedMethods(List.of(
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS"
+    ));
 
-        configuration.setAllowCredentials(true);
+    configuration.setAllowedHeaders(List.of(
+        "Authorization",
+        "Content-Type"
+    ));
 
-        UrlBasedCorsConfigurationSource source =
-            new UrlBasedCorsConfigurationSource();
+    configuration.setAllowCredentials(true);
 
-        source.registerCorsConfiguration(
-            "/**", configuration
-        );
+    UrlBasedCorsConfigurationSource source =
+        new UrlBasedCorsConfigurationSource();
 
-        return source;
-    }
+    source.registerCorsConfiguration("/**", configuration);
+
+    return source;
+}
 
     @Bean
     public PasswordEncoder passwordEncoder() {
