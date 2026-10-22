@@ -20,7 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = {
     "http://localhost:5173",
-    "http://localhost:5174"
+    "http://localhost:5174",
+    "https://charge-share-frontend.vercel.app"
 })
 public class AuthController {
 

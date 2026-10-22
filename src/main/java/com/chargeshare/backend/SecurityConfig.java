@@ -98,14 +98,15 @@ public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
 
     // Local development URLs
-    configuration.setAllowedOrigins(List.of(
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "http://localhost:5176"
-
-        // Add your deployed frontend URL here after hosting it.
-    ));
+   configuration.setAllowedOrigins(List.of(
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:5176",
+    "https://charge-share-frontend.vercel.app"
+));
+        
+    
 
     configuration.setAllowedMethods(List.of(
         "GET",
