@@ -24,7 +24,7 @@ import java.util.UUID;
     "http://localhost:5174",
     "http://localhost:5175",
     "http://localhost:5176",
-     "https://charge-share-frontend.vercel.app"
+    "https://charge-share-frontend.vercel.app"
 })
 public class ChargerController {
 
@@ -41,6 +41,14 @@ public class ChargerController {
         this.chargerRepository = chargerRepository;
     }
 
+    private boolean isLoggedInHost(Authentication authentication) {
+        return authentication != null
+                && authentication.isAuthenticated()
+                && authentication.getAuthorities().stream()
+                    .anyMatch(authority ->
+                        "ROLE_HOST".equals(authority.getAuthority()));
+    }
+
     // Search available chargers publicly.
     @GetMapping
     public List<Charger> searchChargers(
@@ -52,14 +60,23 @@ public class ChargerController {
                         city, vehicleType);
     }
 
-    // Return only the chargers owned by the logged-in host.
+    // Return only chargers owned by the logged-in host.
     @GetMapping("/mine")
-    public List<Charger> getMyChargers(
+    public ResponseEntity<?> getMyChargers(
             Authentication authentication) {
+
+        if (!isLoggedInHost(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "error",
+                        "Only logged-in hosts can access their chargers."
+                    ));
+        }
 
         String hostEmail = authentication.getName();
 
-        return chargerRepository.findByHost_EmailIgnoreCase(hostEmail);
+        return ResponseEntity.ok(
+                chargerRepository.findByHost_EmailIgnoreCase(hostEmail));
     }
 
     // Upload or replace the payment QR image for a host-owned charger.
@@ -73,19 +90,20 @@ public class ChargerController {
             @RequestParam("file") MultipartFile file,
             Authentication authentication) {
 
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || authentication.getAuthorities().stream()
-                    .noneMatch(authority ->
-                        "ROLE_HOST".equals(authority.getAuthority()))) {
-
+        if (!isLoggedInHost(authentication)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Only logged-in hosts can upload payment QR codes."));
+                    .body(Map.of(
+                        "error",
+                        "Only logged-in hosts can upload payment QR codes."
+                    ));
         }
 
         if (chargerId == null || chargerId <= 0) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "A valid charger ID is required."));
+                    .body(Map.of(
+                        "error",
+                        "A valid charger ID is required."
+                    ));
         }
 
         Charger charger = chargerRepository.findById(chargerId)
@@ -101,17 +119,26 @@ public class ChargerController {
                     .equalsIgnoreCase(authentication.getName())) {
 
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "You can only upload a QR code for your own charger."));
+                    .body(Map.of(
+                        "error",
+                        "You can only upload a QR code for your own charger."
+                    ));
         }
 
         if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Please select a QR image."));
+                    .body(Map.of(
+                        "error",
+                        "Please select a QR image."
+                    ));
         }
 
         if (file.getSize() > MAX_QR_SIZE) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "QR image must be 5 MB or smaller."));
+                    .body(Map.of(
+                        "error",
+                        "QR image must be 5 MB or smaller."
+                    ));
         }
 
         String contentType = file.getContentType();
@@ -121,9 +148,13 @@ public class ChargerController {
                 "image/jpeg", ".jpg"
         );
 
-        if (contentType == null || !allowedTypes.containsKey(contentType)) {
+        if (contentType == null
+                || !allowedTypes.containsKey(contentType)) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Only PNG and JPEG QR images are allowed."));
+                    .body(Map.of(
+                        "error",
+                        "Only PNG and JPEG QR images are allowed."
+                    ));
         }
 
         String filename = UUID.randomUUID()
@@ -139,11 +170,13 @@ public class ChargerController {
         try {
             Files.createDirectories(QR_UPLOAD_DIR);
 
-            Files.copy(
-                    file.getInputStream(),
-                    destination,
-                    StandardCopyOption.REPLACE_EXISTING
-            );
+            try (var inputStream = file.getInputStream()) {
+                Files.copy(
+                        inputStream,
+                        destination,
+                        StandardCopyOption.REPLACE_EXISTING
+                );
+            }
 
             String qrPath = "/payment-qr/" + filename;
             charger.setPaymentQrPath(qrPath);
@@ -156,8 +189,12 @@ public class ChargerController {
             ));
 
         } catch (IOException exception) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Unable to save the QR image."));
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                        "error",
+                        "Unable to save the QR image."
+                    ));
         }
     }
 }

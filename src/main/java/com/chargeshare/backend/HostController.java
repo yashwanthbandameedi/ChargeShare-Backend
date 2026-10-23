@@ -20,7 +20,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/chargers")
 @CrossOrigin(origins = {
     "http://localhost:5173",
-    "http://localhost:5174"
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:5176"
 })
 public class HostController {
 
@@ -39,7 +41,9 @@ public class HostController {
         @NotBlank String city,
         @NotBlank String address,
         @NotBlank String vehicleType,
-        @NotNull @Min(1) Double pricePerHour
+        @NotNull @Min(1) Double pricePerHour,
+        Double latitude,
+        Double longitude
     ) {}
 
     @PostMapping
@@ -49,30 +53,55 @@ public class HostController {
             Authentication authentication) {
 
         if (authentication == null
-                || !authentication.isAuthenticated()) {
+                || !authentication.isAuthenticated()
+                || authentication.getName() == null) {
             throw new ResponseStatusException(
                 HttpStatus.UNAUTHORIZED,
                 "Please log in as a host first"
             );
         }
 
-        String email = authentication.getName();
-
         HostAccount host = hostAccountRepository
-            .findByEmailIgnoreCase(email)
+            .findByEmailIgnoreCase(authentication.getName())
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.UNAUTHORIZED,
                 "Host account not found. Please log in again."
             ));
 
-        String vehicleType =
-            request.vehicleType().trim().toLowerCase();
+        String vehicleType = request.vehicleType()
+            .trim()
+            .toLowerCase(java.util.Locale.ROOT);
 
         if (!vehicleType.equals("car")
                 && !vehicleType.equals("bike")) {
             throw new ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
                 "Vehicle type must be car or bike"
+            );
+        }
+
+        Double latitude = request.latitude();
+        Double longitude = request.longitude();
+
+        // Both coordinates must be provided together.
+        if ((latitude == null) != (longitude == null)) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Provide both latitude and longitude, or leave both empty."
+            );
+        }
+
+        // Validate coordinate ranges and reject NaN or infinity.
+        if (latitude != null
+                && (!Double.isFinite(latitude)
+                    || !Double.isFinite(longitude)
+                    || latitude < -90.0
+                    || latitude > 90.0
+                    || longitude < -180.0
+                    || longitude > 180.0)) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "The supplied coordinates are invalid."
             );
         }
 
@@ -85,6 +114,8 @@ public class HostController {
             true
         );
 
+        charger.setLatitude(latitude);
+        charger.setLongitude(longitude);
         charger.setHost(host);
 
         return chargerRepository.save(charger);
