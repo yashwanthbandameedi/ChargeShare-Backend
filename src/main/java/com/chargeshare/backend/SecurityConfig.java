@@ -38,43 +38,40 @@ public class SecurityConfig {
             .cors(cors ->
                 cors.configurationSource(corsConfigurationSource())
             )
-
             .csrf(csrf -> csrf.disable())
-
             .sessionManagement(session ->
                 session.sessionCreationPolicy(
                     SessionCreationPolicy.STATELESS
                 )
             )
-
             .authorizeHttpRequests(auth -> auth
 
-                // Allow browser CORS preflight requests.
+                // Allow CORS preflight requests.
                 .requestMatchers(
                     HttpMethod.OPTIONS, "/**"
                 ).permitAll()
 
-                // Allow the backend root URL for health checking.
-.requestMatchers(
-    HttpMethod.GET, "/"
-).permitAll()
+                // Backend health check.
+                .requestMatchers(
+                    HttpMethod.GET, "/"
+                ).permitAll()
 
-// Public charger search.
-.requestMatchers(
-    HttpMethod.GET, "/api/chargers"
-).permitAll()
+                // Public charger search.
+                .requestMatchers(
+                    HttpMethod.GET, "/api/chargers"
+                ).permitAll()
 
-// Allow anyone to read charger reviews.
-.requestMatchers(
-    HttpMethod.GET, "/api/reviews/charger/**"
-).permitAll()
+                // Public charger reviews.
+                .requestMatchers(
+                    HttpMethod.GET, "/api/reviews/charger/**"
+                ).permitAll()
 
-                // Allow customers to load uploaded payment QR images.
+                // Public payment QR images.
                 .requestMatchers(
                     HttpMethod.GET, "/payment-qr/**"
                 ).permitAll()
 
-                // Existing host signup and login.
+                // Host signup and login.
                 .requestMatchers(
                     "/api/auth/**"
                 ).permitAll()
@@ -84,10 +81,9 @@ public class SecurityConfig {
                     "/api/customer-auth/**"
                 ).permitAll()
 
-                // Keep all other endpoints protected.
+                // Protect all remaining endpoints.
                 .anyRequest().authenticated()
             )
-
             .addFilterBefore(
                 jwtAuthenticationFilter(),
                 UsernamePasswordAuthenticationFilter.class
@@ -96,46 +92,43 @@ public class SecurityConfig {
         return http.build();
     }
 
-    
-@Bean
-public CorsConfigurationSource corsConfigurationSource() {
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
 
-    CorsConfiguration configuration = new CorsConfiguration();
+        CorsConfiguration configuration = new CorsConfiguration();
 
-    // Local development URLs
-   configuration.setAllowedOrigins(List.of(
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-    "http://localhost:5176",
-    "https://charge-share-frontend.vercel.app"
-));
-        
-    
+        // Local development and deployed frontend.
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:5175",
+            "http://localhost:5176",
+            "https://charge-share-frontend.vercel.app"
+        ));
 
-    configuration.setAllowedMethods(List.of(
-        "GET",
-        "POST",
-        "PUT",
-        "PATCH",
-        "DELETE",
-        "OPTIONS"
-    ));
+        configuration.setAllowedMethods(List.of(
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS"
+        ));
 
-    configuration.setAllowedHeaders(List.of(
-        "Authorization",
-        "Content-Type"
-    ));
+        configuration.setAllowedHeaders(List.of(
+            "Authorization",
+            "Content-Type"
+        ));
 
-    configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(true);
 
-    UrlBasedCorsConfigurationSource source =
-        new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+            new UrlBasedCorsConfigurationSource();
 
-    source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", configuration);
 
-    return source;
-}
+        return source;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
